@@ -182,11 +182,6 @@ func TestMD5_std_msgs(t *testing.T) {
 			if e != nil {
 				t.Errorf("Failed to parse: %v", e)
 			}
-			fmt.Println(shortName)
-			fmt.Println(e)
-			fmt.Println(md5)
-
-			fmt.Println(spec)
 			assertEqual(t, spec.MD5Sum, md5)
 		})
 	}

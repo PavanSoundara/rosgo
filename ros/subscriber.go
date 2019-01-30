@@ -128,6 +128,7 @@ func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeId string, nodeApiUr
 					logger.Error(err)
 				}
 				args := []reflect.Value{reflect.ValueOf(m), reflect.ValueOf(msgEvent.event)}
+				fmt.Print(reflect.ValueOf(msgEvent.event))
 				for _, callback := range callbacks {
 					fun := reflect.ValueOf(callback)
 					num_args_needed := fun.Type().NumIn()

@@ -186,7 +186,6 @@ func (pub *defaultPublisher) getPublisherStats() (uint32, []interface{}) {
 }
 
 func (pub *defaultPublisher) getPublisherInfo() []interface{} {
-	fmt.Print("AA")
 	pubInfo := []interface{}{}
 	host, port := pub.hostAndPort()
 	for e := pub.sessions.Front(); e != nil; e = e.Next() {

@@ -249,7 +249,6 @@ func (ctx *MsgContext) LoadActionFromString(text string, fullname string) (*Acti
 	goalText := components[0]
 	feedbackText := components[1]
 	resultText := components[2]
-	fmt.Println(fullname)
 	goalSpec, err := ctx.LoadMsgFromString(goalText, fullname+"Goal")
 	if err != nil {
 		return nil, err

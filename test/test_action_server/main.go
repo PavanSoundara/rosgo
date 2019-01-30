@@ -11,6 +11,7 @@ import (
 //      "std_msgs"
 )
 
+func bloody
 func callback(msg *actionlib_tutorials.FibonacciActionGoal) {
         fmt.Printf("Received: %s\n", msg.Goal.Order)
 }
@@ -23,7 +24,7 @@ func main() {
         }
         defer node.Shutdown()
         node.Logger().SetSeverity(ros.LogLevelDebug)
-	node.NewActionServer("fibonacci", actionlib_tutorials.ActionFibonacci, callback, false)
+	node.NewActionServer("fibonacci", actionlib_tutorials.ActionFibonacci, callback, true)
 
 //	_ = node.NewPublisher("/batter", std_msgs.MsgString)
 

@@ -6,7 +6,7 @@ FROM golang:latest as golang_stage
 FROM $ROS_DOCKER
 COPY --from=golang_stage /usr/local/go /usr/local/go
 
-RUN apt-get update && apt-get install -y wget vim
+RUN apt-get update && apt-get install -y wget vim openssh-server
 
 ENV GOPATH=/root
 ENV PATH=$PATH:$GOPATH/bin:/usr/local/go/bin

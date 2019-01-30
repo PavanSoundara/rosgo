@@ -51,8 +51,8 @@ func newDefaultActionServer(node *defaultNode, action string, actType ActionType
 	server.action = action
 	server.actionType = actType
 	server.shutdownChan = make(chan bool, 1)
-	server.goalSub = node.NewSubscriber(action+"/goal", actType.GoalType(), server.internalGoalCallback)
-	server.cancelSub = node.NewSubscriber(action+"/cancel", MsgGoalID, server.internalGoalCallback)
+	server.goalSub = node.NewSubscriber(action+"/goal", actType.GoalType(), handler)
+	server.cancelSub = node.NewSubscriber(action+"/cancel", MsgGoalID, handler)
 	server.resultPub = node.NewPublisher(action+"/result", actType.ResultType())
 	server.statusPub = node.NewPublisher(action+"/status", MsgGoalStatusArray)
 	server.feedbackPub = node.NewPublisher(action+"/feedback", actType.FeedbackType())
@@ -69,13 +69,6 @@ func (s *defaultActionServer) internalStatusPublisher() {
 		s.statusPub.Publish(&msg)
 		time.Sleep(time.Second)
 	}
-}
-
-func (s *defaultActionServer) internalGoalCallback(m *MessageType) {
-	s.goalChan <- m
-	// args := []reflect.Value{reflect.ValueOf(g), reflect.ValueOf(s.actionType.GoalType)}
-	// fun := reflect.ValueOf(s.handler[0].handler)
-	// fun.Call(args)
 }
 
 func (s *defaultActionServer) Shutdown() {
