@@ -186,31 +186,46 @@ func (pub *defaultPublisher) getPublisherStats() (uint32, []interface{}) {
 }
 
 func (pub *defaultPublisher) getPublisherInfo() []interface{} {
+	fmt.Print("AA")
 	pubInfo := []interface{}{}
+	host, port := pub.hostAndPort()
 	for e := pub.sessions.Front(); e != nil; e = e.Next() {
 		session := e.Value.(*remoteSubscriberSession)
 		stat := []interface{}{
-			session.id,
+			1,
 			session.conn.RemoteAddr().String(),
 			"o",
 			"TCPROS",
 			session.topic,
 			true,
+			fmt.Sprintf("TCPROS connection on port %s to [%s on socket]" , port, host),
+
 		}
 		pubInfo = append(pubInfo, stat)
 	}
 	for e := pub.deadSessions.Front(); e != nil; e = e.Next() {
 		session := e.Value.(*remoteSubscriberSession)
 		stat := []interface{}{
-			session.id,
+			1,
 			session.conn.RemoteAddr().String(),
 			"o",
 			"TCPROS",
 			session.topic,
 			true,
+			fmt.Sprintf("TCPROS connection on port %s to [%s on socket]" , port, host),
 		}
 		pubInfo = append(pubInfo, stat)
 	}
+	stat := []interface{}{
+		1,
+		pub.node.qualifiedName,
+		"o",
+		"TCPROS",
+		pub.topic,
+		true,
+		fmt.Sprintf("TCPROS connection on port %s to [%s on socket]" , port, host),
+	}
+	pubInfo = append(pubInfo, stat)
 	return pubInfo
 }
 

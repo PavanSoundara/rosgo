@@ -134,7 +134,7 @@ func newDefaultNode(name string, args []string) (*defaultNode, error) {
 	node.nameResolver = newNameResolver(node.namespace, node.name, remapping)
 	node.nonRosArgs = rest
 
-	node.qualifiedName = node.namespace + "/" + node.name
+	node.qualifiedName = node.namespace + node.name
 	node.subscribers = make(map[string]*defaultSubscriber)
 	node.publishers = make(map[string]*defaultPublisher)
 	node.servers = make(map[string]*defaultServiceServer)
@@ -230,22 +230,23 @@ func (node *defaultNode) getBusStats(callerId string) (interface{}, error) {
 	serviceStats := []interface{}{}
 
 	stats := []interface{}{publishStats, subscribeStats, serviceStats}
-	return buildRosApiResult(-1, "Success", stats), nil
+	return buildRosApiResult(0, "Success", stats), nil
 }
 
 func (node *defaultNode) getBusInfo(callerId string) (interface{}, error) {
 	publishInfo := []interface{}{}
-	for t, p := range node.publishers {
-		data := []interface{}{t, p.getPublisherInfo()}
-		publishInfo = append(publishInfo, data)
+	for _, p := range node.publishers {
+		publishInfo = append(publishInfo, p.getPublisherInfo()...)
 	}
 
 	subscribeInfo := []interface{}{}
-	for t, s := range node.subscribers {
-		data := []interface{}{t, s.getSubscriberInfo()}
-		subscribeInfo = append(subscribeInfo, data)
+	for _, s := range node.subscribers {
+		subscribeInfo = append(subscribeInfo, s.getSubscriberInfo()...)
 	}
 
+	fmt.Print(publishInfo)
+
+//	fmt.Print(subscribeInfo)
 	serviceInfo := []interface{}{}
 
 	info := []interface{}{}
@@ -253,7 +254,7 @@ func (node *defaultNode) getBusInfo(callerId string) (interface{}, error) {
 	info = append(info, subscribeInfo...)
 	info = append(info, serviceInfo...)
 
-	return buildRosApiResult(-1, "Success", info), nil
+	return buildRosApiResult(0, "bus info", info), nil
 }
 
 func (node *defaultNode) getMasterUri(callerId string) (interface{}, error) {
