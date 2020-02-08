@@ -1,6 +1,6 @@
 ## rosgo
 
-[![GoDoc](https://godoc.org/github.com/fetchrobotics/rosgo?status.svg)](https://godoc.org/github.com/fetchrobotics/rosgo) 
+[![GoDoc](https://godoc.org/github.com/pavansoundara/rosgo?status.svg)](https://godoc.org/github.com/pavansoundara/rosgo) 
 [![Build Status](https://travis-ci.org/fetchrobotics/rosgo.svg?branch=master)](https://travis-ci.org/fetchrobotics/rosgo)
 
 ## Package Summary
