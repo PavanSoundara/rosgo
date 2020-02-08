@@ -32,20 +32,19 @@ type defaultSubscriber struct {
 }
 
 func newDefaultSubscriber(topic string, msgType MessageType, callback interface{}) *defaultSubscriber {
-	sub := new(defaultSubscriber)
-	sub.topic = topic
-	sub.msgType = msgType
-	sub.msgChan = make(chan messageEvent, 10)
-	sub.pubListChan = make(chan []string, 10)
-	sub.addCallbackChan = make(chan interface{}, 10)
-	sub.shutdownChan = make(chan struct{}, 10)
-	sub.disconnectedChan = make(chan string, 10)
-	sub.connections = make(map[string]chan struct{})
-	sub.callbacks = []interface{}{callback}
-	return sub
+	return &defaultSubscriber{
+		topic:            topic,
+		msgType:          msgType,
+		msgChan:          make(chan messageEvent, 10),
+		pubListChan:      make(chan []string, 10),
+		addCallbackChan:  make(chan interface{}, 10),
+		shutdownChan:     make(chan struct{}, 10),
+		disconnectedChan: make(chan string, 10),
+		connections:      make(map[string]chan struct{}),
+		callbacks:        []interface{}{callback}}
 }
 
-func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeId string, nodeApiUri string, masterUri string, jobChan chan func(), logger Logger) {
+func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeID string, nodeURI string, masterURI string, jobChan chan func(), logger Logger) {
 	logger.Debugf("Subscriber goroutine for %s started.", sub.topic)
 	wg.Add(1)
 	defer wg.Done()
@@ -66,17 +65,20 @@ func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeId string, nodeApiUr
 				quitChan <- struct{}{}
 				delete(sub.connections, pub)
 			}
+
 			for _, pub := range newPubs {
 				protocols := []interface{}{[]interface{}{"TCPROS"}}
-				result, err := callRosApi(pub, "requestTopic", nodeId, sub.topic, protocols)
+				result, err := callRosAPI(pub, "requestTopic", nodeID, sub.topic, protocols)
 				if err != nil {
-					logger.Fatal(err)
+					logger.Fatalf("[DefaultSubscriber] %v", err)
 					continue
 				}
+
 				protocolParams := result.([]interface{})
 				for _, x := range protocolParams {
 					logger.Debug(x)
 				}
+
 				name := protocolParams[0].(string)
 				if name == "TCPROS" {
 					addr := protocolParams[1].(string)
@@ -87,7 +89,7 @@ func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeId string, nodeApiUr
 					go startRemotePublisherConn(logger,
 						uri, sub.topic,
 						sub.msgType.MD5Sum(),
-						sub.msgType.Name(), nodeId,
+						sub.msgType.Name(), nodeID,
 						sub.msgChan,
 						quitChan,
 						sub.disconnectedChan)
@@ -95,11 +97,13 @@ func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeId string, nodeApiUr
 					logger.Warnf("rosgo Not support protocol '%s'", name)
 				}
 			}
+
 		case callback := <-sub.addCallbackChan:
 			logger.Debug("Receive addCallbackChan")
 			sub.callbacks = append(sub.callbacks, callback)
+
 		case msgEvent := <-sub.msgChan:
-			// Pop received message then bind callbacks and enqueue to the job channle.
+			// Pop received message then bind callbacks and enqueue to the job channel.
 			logger.Debug("Receive msgChan")
 			callbacks := make([]interface{}, len(sub.callbacks))
 			copy(callbacks, sub.callbacks)
@@ -112,24 +116,25 @@ func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeId string, nodeApiUr
 				args := []reflect.Value{reflect.ValueOf(m), reflect.ValueOf(msgEvent.event)}
 				for _, callback := range callbacks {
 					fun := reflect.ValueOf(callback)
-					num_args_needed := fun.Type().NumIn()
-					if num_args_needed <= 2 {
-						fun.Call(args[0:num_args_needed])
+					numArgsNeeded := fun.Type().NumIn()
+					if numArgsNeeded <= 2 {
+						fun.Call(args[0:numArgsNeeded])
 					}
 				}
 			}
 			logger.Debug("Callback job enqueued.")
-		case pubUri := <-sub.disconnectedChan:
-			logger.Debugf("Connection to %s was disconnected.", pubUri)
-			delete(sub.connections, pubUri)
+
+		case pubURI := <-sub.disconnectedChan:
+			logger.Debugf("Connection to %s was disconnected.", pubURI)
+			delete(sub.connections, pubURI)
+
 		case <-sub.shutdownChan:
 			// Shutdown subscription goroutine
 			logger.Debug("Receive shutdownChan")
 			for _, closeChan := range sub.connections {
-				closeChan <- struct{}{}
 				close(closeChan)
 			}
-			_, err := callRosApi(masterUri, "unregisterSubscriber", nodeId, sub.topic, nodeApiUri)
+			_, err := callRosAPI(masterURI, "unregisterSubscriber", nodeID, sub.topic, nodeURI)
 			if err != nil {
 				logger.Warn(err)
 			}
@@ -139,28 +144,30 @@ func (sub *defaultSubscriber) start(wg *sync.WaitGroup, nodeId string, nodeApiUr
 }
 
 func startRemotePublisherConn(logger Logger,
-	pubUri string, topic string, md5sum string,
-	msgType string, nodeId string,
+	pubURI string, topic string, md5sum string,
+	msgType string, nodeID string,
 	msgChan chan messageEvent,
 	quitChan chan struct{},
 	disconnectedChan chan string) {
 	logger.Debug("startRemotePublisherConn()")
 
+	conn, err := net.Dial("tcp", pubURI)
+	if err != nil {
+		logger.Fatalf("Failed to connect %s!", pubURI)
+	}
 	defer func() {
+		if err := conn.Close(); err != nil {
+			logger.Errorf("Error closing connection: %v", err)
+		}
 		logger.Debug("startRemotePublisherConn() exit")
 	}()
-
-	conn, err := net.Dial("tcp", pubUri)
-	if err != nil {
-		logger.Fatalf("Failed to connect %s!", pubUri)
-	}
 
 	// 1. Write connection header
 	var headers []header
 	headers = append(headers, header{"topic", topic})
 	headers = append(headers, header{"md5sum", md5sum})
 	headers = append(headers, header{"type", msgType})
-	headers = append(headers, header{"callerid", nodeId})
+	headers = append(headers, header{"callerid", nodeID})
 	logger.Debug("TCPROS Connection Header")
 	for _, h := range headers {
 		logger.Debugf("  `%s` = `%s`", h.key, h.value)
@@ -170,7 +177,7 @@ func startRemotePublisherConn(logger Logger,
 		logger.Fatal("Failed to write connection header.")
 	}
 
-	// 2. Read reponse header
+	// 2. Read response header
 	var resHeaders []header
 	resHeaders, err = readConnectionHeader(conn)
 	if err != nil {
@@ -195,7 +202,7 @@ func startRemotePublisherConn(logger Logger,
 
 	// 3. Start reading messages
 	readingSize := true
-	var msgSize uint32 = 0
+	var msgSize uint32
 	var buffer []byte
 	for {
 		select {
@@ -207,13 +214,18 @@ func startRemotePublisherConn(logger Logger,
 				//logger.Debug("Reading message size...")
 				err := binary.Read(conn, binary.LittleEndian, &msgSize)
 				if err != nil {
+					if err == io.EOF {
+						logger.Infof("Publisher %s on topic %s disconnected", pubURI, topic)
+						disconnectedChan <- pubURI
+						return
+					}
 					if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 						// Timed out
 						//logger.Debug(neterr)
 						continue
 					} else {
-						logger.Error("Failed to read a message size")
-						disconnectedChan <- pubUri
+						logger.Error("Failed to read a message size", err)
+						disconnectedChan <- pubURI
 						return
 					}
 				}
@@ -221,16 +233,20 @@ func startRemotePublisherConn(logger Logger,
 				buffer = make([]byte, int(msgSize))
 				readingSize = false
 			} else {
-				//logger.Debug("Reading message body...")
 				_, err = io.ReadFull(conn, buffer)
 				if err != nil {
+					if err == io.EOF {
+						logger.Info("Publisher disconnected")
+						disconnectedChan <- pubURI
+						return
+					}
 					if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 						// Timed out
 						//logger.Debug(neterr)
 						continue
 					} else {
-						logger.Error("Failed to read a message body")
-						disconnectedChan <- pubUri
+						logger.Error("Failed to read a message body", err)
+						disconnectedChan <- pubURI
 						return
 					}
 				}

@@ -1,3 +1,4 @@
+.idea/
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
 *.a
@@ -6,6 +7,7 @@
 # Folders
 _obj
 _test
+vendor/
 
 # Architecture specific extensions/prefixes
 *.[568vq]
@@ -20,3 +22,5 @@ _cgo_export.*
 _testmain.go
 
 *.exe
+
+vendor/**/*
